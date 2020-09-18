@@ -1,10 +1,8 @@
-# from https://stackoverflow.com/questions/748675/finding-duplicate-files-and-removing-them
 #!/usr/bin/env python
 from collections import defaultdict
 import hashlib
 import os
 import sys
-
 
 def chunk_reader(fobj, chunk_size=1024):
     """Generator that reads a file in chunks of bytes"""
@@ -13,7 +11,6 @@ def chunk_reader(fobj, chunk_size=1024):
         if not chunk:
             return
         yield chunk
-
 
 def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     hashobj = hash()
@@ -29,17 +26,20 @@ def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     file_object.close()
     return hashed
 
-
 def check_for_duplicates(paths, hash=hashlib.sha1):
     hashes_by_size = defaultdict(list)  # dict of size_in_bytes: [full_path_to_file1, full_path_to_file2, ]
     hashes_on_1k = defaultdict(list)  # dict of (hash1k, size_in_bytes): [full_path_to_file1, full_path_to_file2, ]
-    hashes_full = {}   # dict of full_file_hash: full_path_to_file_string
+    hashes_full = defaultdict(list)   # dict of full_file_hash: full_path_to_file_string
 
     for path in paths:
         for dirpath, dirnames, filenames in os.walk(path):
             # get all files that have the same size - they are the collision candidates
             for filename in filenames:
                 full_path = os.path.join(dirpath, filename)
+                # Yes we go through both sourcedir and targetdir
+                # icount+=1
+                # if icount % 100 == 0:
+                #     print(full_path)
                 try:
                     # if the target is a symlink (soft one), this will 
                     # dereference it - change the value to the actual target file
@@ -49,7 +49,6 @@ def check_for_duplicates(paths, hash=hashlib.sha1):
                 except (OSError,):
                     # not accessible (permissions, etc) - pass on
                     continue
-
 
     # For all files with the same file size, get their hash on the 1st 1024 bytes only
     for size_in_bytes, files in hashes_by_size.items():
@@ -67,26 +66,49 @@ def check_for_duplicates(paths, hash=hashlib.sha1):
                 # the file access might've changed till the exec point got here 
                 continue
 
-    # For all files with the hash on the 1st 1024 bytes, get their hash on the full file - collisions will be duplicates
+    # For all files with the same file size, and hash on the 1st 1024 bytes
     for __, files_list in hashes_on_1k.items():
         if len(files_list) < 2:
             continue    # this hash of fist 1k file bytes is unique, no need to spend cpy cycles on it
 
         for filename in files_list:
-            try: 
+            try:
                 full_hash = get_hash(filename, first_chunk_only=False)
-                duplicate = hashes_full.get(full_hash)
-                if duplicate:
-                    print("Duplicate found: {} and {}".format(filename, duplicate))
-                else:
-                    hashes_full[full_hash] = filename
+                hashes_full[(full_hash, size_in_bytes)].append(filename)
             except (OSError,):
                 # the file access might've changed till the exec point got here 
                 continue
 
+    # then loop on individual list of duplicate
+    ltgd = len(targetdir)
+    # For all files with the hash on the 1st 1024 bytes, get their hash on the full file - collisions will be duplicates
+    for __, files_list in hashes_full.items():
+        if len(files_list) < 2:
+            continue    # this hash of the file bytes is unique, no need to spend cpy cycles on it
 
-if __name__ == "__main__":
-    if sys.argv[1:]:
-        check_for_duplicates(sys.argv[1:])
-    else:
-        print("Please pass the paths to check as parameters to the script")
+        # here we have several duplicate files
+        print(f"Duplicate found: {files_list}")
+        keep_one = False
+        for filename in files_list:
+            try: 
+                if ( not(keep_one) and filename == files_list[-1] ) or ( filename.find(sourcedir, 0, ltgd) == 0 ):
+                    # last file of the list OR file in source dir, keep it
+                    keep_one = True # we are sure one file will be kept
+                    print(f'Keeping: {filename}')
+                else:
+                    # file not the last one and not in sourcedir, delete it
+                    os.remove(filename)
+                    print(f'Deleted: {filename}')   
+            except (OSError,):
+                # the file access might've changed till the exec point got here 
+                print(f'Error processing: {filename}')
+                continue
+        print()
+
+# master directory, will be kept untouched
+sourcedir = r'C:\Users\raphael.louvrier\OneDrive - Vallourec\OEE Vallourec Drilling Source'
+
+# directory where we want to delete the duplicates
+targetdir = r'C:\Users\raphael.louvrier\OneDrive - Vallourec\OEE Vallourec Drilling Target'
+
+check_for_duplicates([sourcedir, targetdir])
