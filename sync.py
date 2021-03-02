@@ -1,9 +1,17 @@
 # documentation of the package https://pypi.org/project/dirsync/
 from dirsync import sync
 
-sourcedir = r'C:\Users\raphael.louvrier\OneDrive - Vallourec\1 Support\Archive\OEE Vallourec Drilling'
-targetdir = r'C:\Users\raphael.louvrier\OneDrive - Vallourec\OEE Vallourec Drilling'
-action = 'sync'
-# options = 
+def one_way_sync(sourcedir, targetdir):
+    """One way synchronization from source folder to target folder
 
-sync(sourcedir, targetdir, action) #, **options)
+    Args:
+        sourcedir (str): source folder
+        targetdir (str): target folder
+    """
+    action = 'sync'
+    sync(sourcedir, targetdir, action)
+
+# define source and target folder, run the synchronization
+source = r'C:\Users\Raphael.Louvrier\OneDrive - Vallourec\Desktop\a'
+target = r'C:\Users\Raphael.Louvrier\OneDrive - Vallourec\Desktop\b'
+one_way_sync(source, target)
