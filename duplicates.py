@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from collections import defaultdict
 import hashlib
 import os
@@ -114,28 +113,36 @@ def delete_files(hashes_full):
         print()
 
 def drop_empty_folders(directory):
-    """Verify that every empty folder removed in local storage."""
-    # credit: https://stackoverflow.com/questions/47093561/remove-empty-folders-python
+    """Walk a folder and all its sub folder, delete any empty (sub)folder
+
+    Args:
+        :directory (str): directory"""
     for dirpath, dirnames, filenames in os.walk(directory, topdown=False):
         if not dirnames and not filenames:
+            # we have an empty folder
             try:
                 os.rmdir(dirpath)
                 print(f'Deleted empty folder: {dirpath}')  
             except (OSError):
+                # we were not able to delete the folder (lock...)
                 print(f'Error deleting empty folder: {dirpath}')
                 continue
+            
+def print_duplicate(hash_dict):
+    """Print list of duplicate files based on their hash from the input dictionary
 
-def list_duplicate(hashes_full):
+    Args:
+        :hash_dict (dict): Dictionary hash: [list of files with that hash value]"""
     # For all files with the hash on the 1st 1024 bytes, get their hash on the full file - collisions will be duplicates
-    for __, files_list in hashes_full.items():
-        files_list = list(set(files_list))
-        if len(files_list) < 2:
-            continue    # this hash of the file bytes is unique, no need to spend cpy cycles on it
-
-        # here we have several duplicate files
-        print("\nDuplicate found:")
-        for filename in files_list:
-            print(filename)
+    for __, files_list in hash_dict.items():
+        # make sure we only have one time each file for the given hash
+        files_list = list(set(files_list)) 
+        if len(files_list) >= 2:
+            # at least 2 files bytes have this hash
+            print("\nDuplicate found:")
+            # print with a loop with return carriage for the sake of readability
+            for filename in files_list:
+                print(filename)
 
 
 def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
@@ -147,7 +154,7 @@ def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
         for _ in range(10):
             drop_empty_folders(targetdir)
     else:
-        list_duplicate(hashes_full)
+        print_duplicate(hashes_full)
 
 # master directory, will be kept untouched
 # sourcedir = r'E:\BackUp\HPWL0621\Documents'
