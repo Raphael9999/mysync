@@ -113,17 +113,21 @@ def delete_files(hashes_full):
         print()
 
 def drop_empty_folders(directory):
-    """Verify that every empty folder removed in local storage."""
-    # credit: https://stackoverflow.com/questions/47093561/remove-empty-folders-python
+    """Walk a folder and all its sub folder, delete any empty (sub)folder
+
+    Args:
+        :directory (str): directory"""
     for dirpath, dirnames, filenames in os.walk(directory, topdown=False):
         if not dirnames and not filenames:
+            # we have an empty folder
             try:
                 os.rmdir(dirpath)
                 print(f'Deleted empty folder: {dirpath}')  
             except (OSError):
+                # we were not able to delete the folder (lock...)
                 print(f'Error deleting empty folder: {dirpath}')
                 continue
-
+            
 def print_duplicate(hash_dict):
     """Print list of duplicate files based on their hash from the input dictionary
 
