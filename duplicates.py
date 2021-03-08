@@ -88,29 +88,26 @@ def delete_files(hashes_full):
     # For all files with the hash on the 1st 1024 bytes, get their hash on the full file - collisions will be duplicates
     for __, files_list in hashes_full.items():
         files_list = list(set(files_list))
-        if len(files_list) < 2:
-            continue    # this hash of the file bytes is unique, no need to spend cpy cycles on it
-
-        # here we have several duplicate files
-        print(f"Duplicate found: {files_list}")
-        keep_one = False
-        for filename in files_list:
-            try: 
-                if ( not(keep_one) and filename == files_list[-1] ) or ( filename.find(sourcedir, 0) == 0 ):
-                    # last file of the list OR file in source dir, keep it
-                    keep_one = True # we are sure one file will be kept
-                    # print(f'Keeping: {filename}')
-                elif filename.find(targetdir, 0) == 0:
-                    # file not the last one and not in sourcedir, delete it
-                    os.remove(filename)
-                    print(f'Deleted: {filename}')   
-                else: 
-                    print('Should not be here')
-            except (OSError):
-                # the file access might've changed till the exec point got here 
-                print(f'Error processing: {filename}')
-                continue
-        print()
+        if len(files_list) >= 2:
+            # all the files in files_list share the same hash and are duplicates
+            print(f"\nDuplicate found: {files_list}")
+            keep_one = False
+            for filename in files_list:
+                try: 
+                    if ( not(keep_one) and filename == files_list[-1] ) or ( filename.find(sourcedir, 0) == 0 ):
+                        # last file of the list OR file in source dir, keep it
+                        keep_one = True # we are sure one file will be kept
+                        # print(f'Keeping: {filename}')
+                    elif filename.find(targetdir, 0) == 0:
+                        # file not the last one and not in sourcedir, delete it
+                        os.remove(filename)
+                        print(f'Deleted: {filename}')   
+                    else: 
+                        print('Should not be here')
+                except (OSError):
+                    # the file access might've changed till the exec point got here 
+                    print(f'Error processing: {filename}')
+                    continue
 
 def drop_empty_folders(directory):
     """Walk a folder and all its sub folder, delete any empty (sub)folder
