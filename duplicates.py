@@ -83,13 +83,15 @@ def get_files_by_full(hashes_on_1k, hash=hashlib.sha1):
     print('List full hash, done')
     return hashes_full
 
-def delete_files(duplicate_dict):
+def delete_files(duplicate_dict, sourcedir, targetdir):
     """Delete duplicated files in the target directory,
     keep all the files in the source directory, 
     always keep at least one copy of the file
 
     Args:
-        :duplicate_dict (dict): Dictionary hash: [list of files with that hash value]"""
+        :duplicate_dict (dict): Dictionary hash: [list of files with that hash value]
+        :sourcedir (str): directory and all its subfolders that will be left unchanged
+        :targetdir (str): directory and all its subfolders from which we want to delete duplicate"""
     for __, files_list in duplicate_dict.items():
         files_list = list(set(files_list))
         if len(files_list) >= 2:
@@ -154,7 +156,7 @@ def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
     hashes_on_1k = get_files_by_1k(hashes_by_size)
     hashes_full = get_files_by_full(hashes_on_1k)
     if del_target:
-        delete_files(hashes_full)
+        delete_files(hashes_full, sourcedir, targetdir)
         for _ in range(10):
             drop_empty_folders(targetdir)
     else:
