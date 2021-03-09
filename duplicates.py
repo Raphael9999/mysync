@@ -107,29 +107,29 @@ def delete_files(duplicate_dict, sourcedir, targetdir):
         :sourcedir (str): directory and all its subfolders that will be left unchanged
         :targetdir (str): directory and all its subfolders from which we want to delete duplicate"""
     for __, files_list in duplicate_dict.items():
+        # all the files in files_list share the same hash and are duplicates
         files_list = list(set(files_list))
+        # if there is only one file, no need to processs as we keep it
         if len(files_list) >= 2:
-            # all the files in files_list share the same hash and are duplicates
             print(f"\nDuplicate found: {files_list}")
-            keep_one = False
-            for filename in files_list:
-                try: 
-                    if (( not(keep_one) and filename == files_list[-1] )  
-                        # if none were kept, we keep the last file anyway 
-                        or ( filename.find(sourcedir, 0) == 0 )):
-                        # we keep all files from the source dir
-                        keep_one = True # we are sure we have kept one file
-                        # print(f'Keeping: {filename}')
-                    elif filename.find(targetdir, 0) == 0:
-                        # file is in the target directory
-                        os.remove(filename)
-                        print(f'Deleted: {filename}')   
-                    else: 
-                        # it would be abnormal to be here
-                        print('Should not be here')
+            # delete the file in target dir
+            delete_files = [fn for fn in files_list if is_in_dir(fn, targetdir)]
+            # keep the files in source dir
+            keep_files = [fn for fn in files_list if is_in_dir(fn, sourcedir)]
+            # ensure that no matter what we keep at least one file
+            if keep_files == list() and len(delete_files) > 0:
+                # as keep_files is empty we transfer the first of delete_files
+                keep_files = [delete_files[0]]
+                delete_files.pop(0)
+            
+            count_del = 0 # count nbr of deleted files
+            for fn in delete_files:
+                try:
+                    os.remove(fn)
+                    count_del += 1 
                 except (OSError):
                     # file access issue, lock...
-                    print(f'Error processing: {filename}')
+                    print(f'Error processing: {fn}')
                     continue # continue the loop
 
 def drop_empty_folders(directory):
