@@ -83,6 +83,20 @@ def get_files_by_full(hashes_on_1k, hash=hashlib.sha1):
     print('List full hash, done')
     return hashes_full
 
+def is_in_dir(file_name=None, folder=None):
+    """Check if the file_name is in the folder or any of its subfolder
+    Both are expected to be absolute path
+
+    Args:
+        :file_name (str): Mandatory, file to check
+        :folder (str): Mandatory, folder to check
+        
+    Return: True if file_name is under folder, False otherwise"""
+    # verify that both args are provided and are string
+    if not ( isinstance(file_name, str) and isinstance(folder, str) ):
+        raise KeyError('is_in_dir require 2 strings')
+    return file_name.find(folder, 0) == 0
+
 def delete_files(duplicate_dict, sourcedir, targetdir):
     """Delete duplicated files in the target directory,
     keep all the files in the source directory, 
