@@ -97,6 +97,25 @@ def is_in_dir(file_name=None, folder=None):
         raise KeyError('is_in_dir require 2 strings')
     return file_name.find(folder, 0) == 0
 
+def delete_files(delete_list):
+    """Remove every files in the list provided, handle exceptions
+
+    Args:
+        :delete_list (list): list of file to remove
+    
+    Return: (int) number of files removed
+    """
+    nb_deleted = 0 # count nbr of deleted files
+    for fn in delete_list:
+        try:
+            os.remove(fn)
+            nb_deleted += 1 
+        except (OSError):
+            # file access issue, lock...
+            print(f'Error removing: {fn}')
+            continue # continue the loop
+    return nb_deleted
+
 def print_df(nb_duplicates, nb_deleted, nb_kept, keep_list):
     """Print out synthesis for delete_duplicates routine
 
@@ -111,7 +130,7 @@ def print_df(nb_duplicates, nb_deleted, nb_kept, keep_list):
             {nb_kept} kept')
     print(f'Keeping: {keep_list}')
 
-def delete_files(duplicate_dict, sourcedir, targetdir, printout=True):
+def delete_duplicates(duplicate_dict, sourcedir, targetdir, printout=True):
     """Delete duplicated files in the target directory,
     keep all the files in the source directory, 
     always keep at least one copy of the file
@@ -126,30 +145,22 @@ def delete_files(duplicate_dict, sourcedir, targetdir, printout=True):
         files_list = list(set(files_list))
         # if there is only one file, no need to processs as we keep it
         if len(files_list) >= 2:
-            print(f"\nDuplicate found: {files_list}")
             # delete the file in target dir
-            delete_files = [fn for fn in files_list if is_in_dir(fn, targetdir)]
+            delete_list = [fn for fn in files_list if is_in_dir(fn, targetdir) 
+                                                      and ~is_in_dir(fn, sourcedir)] # for src & trg overlap
             # keep the files in source dir
-            keep_files = [fn for fn in files_list if is_in_dir(fn, sourcedir)]
+            keep_list = [fn for fn in files_list if is_in_dir(fn, sourcedir)]
             # ensure that no matter what we keep at least one file
-            if keep_files == list() and len(delete_files) > 0:
-                # as keep_files is empty we transfer the first of delete_files
-                keep_files = [delete_files[0]]
-                delete_files.pop(0)
-                
-            nb_deleted = 0 # count nbr of deleted files
-            for fn in delete_files:
-                try:
-                    os.remove(fn)
-                    nb_deleted += 1
-                except (OSError):
-                    # file access issue, lock...
-                    print(f'Error processing: {fn}')
-                    continue # continue the loop
+            if keep_list == list() and len(delete_list) > 0:
+                # as keep_list is empty we transfer the first of delete_list
+                keep_list = [delete_list[0]]
+                delete_list.pop(0)
+            if len(keep_list) >= 1: # safety check, 
+                # delete the files, retrieve nb successful deletion
+                nb_deleted = delete_files(delete_list)
             if printout:
                 # print out the result for this set of duplicated files
-                print_df(len(files_list), nb_deleted, len(keep_files), keep_files)
-            
+                print_df(len(files_list), nb_deleted, len(keep_list), keep_list)
 
 def drop_empty_folders(directory):
     """Walk a folder and all its sub folder, delete any empty (sub)folder
@@ -189,7 +200,7 @@ def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
     hashes_on_1k = get_files_by_1k(hashes_by_size)
     hashes_full = get_files_by_full(hashes_on_1k)
     if del_target:
-        delete_files(hashes_full, sourcedir, targetdir)
+        delete_duplicates(hashes_full, sourcedir, targetdir)
         for _ in range(10):
             drop_empty_folders(targetdir)
     else:
