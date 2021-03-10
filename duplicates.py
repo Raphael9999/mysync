@@ -28,6 +28,14 @@ def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     return hashed
 
 def get_files_by_size(paths):
+    """Build a dictionary containing lists of files with the same size. 
+    Those lists of files contains potential duplicates that will be analysee further
+
+    Args: 
+        :paths (list): List of folder to walk to build the output
+    
+    Return: dictionary { file size : [list of files of that size],...}
+    """
     hashes_by_size = defaultdict(list)  # dict of size_in_bytes: [full_path_to_file1, full_path_to_file2, ]
     for path in paths:
         for dirpath, __, filenames in os.walk(path):
