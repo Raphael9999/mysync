@@ -55,6 +55,15 @@ def get_files_by_size(paths):
     return hashes_by_size
 
 def get_files_by_1k(hashes_by_size, hash=hashlib.sha1):
+    """Build a dictionary containing lists of files with the same size 
+    and hash on their first 1024 bits. Those lists of files contains 
+    potential duplicates that will be analysee further
+
+    Args: 
+        :hashes_by_size (dict): dictionary { file size : [list of files of that size],...}
+    
+    Return: dictionary { (hash on 1024 bits, file size) : [list of files matching the key hash and size],...}
+    """
     hashes_on_1k = defaultdict(list)  # dict of (hash1k, size_in_bytes): [full_path_to_file1, full_path_to_file2, ]
     # For all files with the same file size, get their hash on the 1st 1024 bytes only
     for size_in_bytes, files in hashes_by_size.items():
