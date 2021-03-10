@@ -84,6 +84,16 @@ def get_files_by_1k(hashes_by_size, hash=hashlib.sha1):
     return hashes_on_1k
 
 def get_files_by_full(hashes_on_1k, hash=hashlib.sha1):
+    """Build a dictionary containing lists of files with the same size and 
+    full file's hash. Those lists of files only contains duplicated files. 
+
+    Args: 
+        :hashes_on_1k (dict): dictionary { (hash on 1024 bits, file size) : 
+                                           list of files matching the key hash and size],...}
+    
+    Return: dictionary containing lists of duplicated files by their hash and size,
+            { (full file's hash, file size) : [list of files sharing full hash and size],...}
+    """
     # For all files with the same file size, and hash on the 1st 1024 bytes
     hashes_full = defaultdict(list)   # dict of full_file_hash: full_path_to_file_string
     for k, files_list in hashes_on_1k.items():
