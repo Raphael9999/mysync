@@ -10,18 +10,27 @@ def chunk_reader(fobj, chunk_size=1024):
             return
         yield chunk
 
-def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
-    hashobj = hash()
-    file_object = open(filename, 'rb')
+def get_hash(filename, first_1k=False, constructor=hashlib.sha1):
+    """Return hash for a file
 
-    if first_chunk_only:
-        hashobj.update(file_object.read(1024))
+    Args:
+        :filename (str): filename to be hashed
+        :first_1k (bool): True hash only the first 1024 bit, False hash full file
+        :constructor: type of hash, defaulted to sha1
+    
+    Return: (str) hash of the file
+    """
+    hashobj = constructor()
+    file = open(filename, 'rb')
+
+    if first_1k:
+        hashobj.update(file.read(1024))
     else:
-        for chunk in chunk_reader(file_object):
+        for chunk in chunk_reader(file):
             hashobj.update(chunk)
     hashed = hashobj.digest()
 
-    file_object.close()
+    file.close()
     return hashed
 
 def get_files_by_size(paths):
