@@ -2,11 +2,17 @@ from collections import defaultdict
 import hashlib
 import os
 
-def chunk_reader(fobj, chunk_size=1024):
-    """Generator that reads a file in chunks of bytes"""
+def chunk_generator(file, chunk_size=1024):
+    """Generator that reads a file in chunks of chunk_size bytes
+    
+    Args:
+        :file (obj): file object to be read in chunk
+        :chunk_size (int): size of the chunk in bit
+    
+    Return: the next chunk of the file of size chunk_size bit"""
     while True:
-        chunk = fobj.read(chunk_size)
-        if not chunk:
+        chunk = file.read(chunk_size)
+        if not chunk: # exit of the loop
             return
         yield chunk
 
@@ -26,7 +32,7 @@ def get_hash(filename, first_1k=False, constructor=hashlib.sha1):
     if first_1k:
         hashobj.update(file.read(1024))
     else:
-        for chunk in chunk_reader(file):
+        for chunk in chunk_generator(file):
             hashobj.update(chunk)
     hashed = hashobj.digest()
 
