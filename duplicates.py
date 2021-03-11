@@ -48,7 +48,7 @@ def get_files_by_size(paths):
                 except (OSError,):
                     # not accessible (permissions, etc) - pass on
                     continue
-    print('List by size, done')
+    print('Dictionary of files by size has been built')
     return dict_files_x_size
 
 def get_files_by_1k(dict_files_x_size, hash=hashlib.sha1):
@@ -77,7 +77,7 @@ def get_files_by_1k(dict_files_x_size, hash=hashlib.sha1):
             except (OSError,):
                 # the file access might've changed till the exec point got here 
                 continue
-    print('List hash 1k, done')
+    print('Dictionary of files by hash on 1024 bit has been built')
     return ddict_files_x_1khash
 
 def get_files_by_full(ddict_files_x_1khash, hash=hashlib.sha1):
@@ -104,7 +104,7 @@ def get_files_by_full(ddict_files_x_1khash, hash=hashlib.sha1):
                     # problem accesing the file
                     print(f'Error hashing file: {filename}')
                     continue # continue the loop
-    print('Dictionary by full hash has been built')
+    print('Dictionary of files by full hash has been built')
     return dict_files_x_fullhash
 
 def is_in_dir(file_name=None, folder=None):
