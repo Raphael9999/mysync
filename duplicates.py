@@ -1,8 +1,6 @@
 from collections import defaultdict
 import hashlib
 import os
-import sys
-
 
 def chunk_reader(fobj, chunk_size=1024):
     """Generator that reads a file in chunks of bytes"""
@@ -11,7 +9,6 @@ def chunk_reader(fobj, chunk_size=1024):
         if not chunk:
             return
         yield chunk
-
 
 def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     hashobj = hash()
@@ -221,7 +218,6 @@ def print_duplicate(hash_dict):
             for filename in files_list:
                 print(filename)
 
-
 def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
     dict_files_x_size = get_files_by_size(paths)
     ddict_files_x_1khash = get_files_by_1k(dict_files_x_size)
@@ -234,20 +230,9 @@ def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
         print_duplicate(dict_files_x_fullhash)
 
 # master directory, will be kept untouched
-# sourcedir = r'E:\BackUp\HPWL0621\Documents'
-# sourcedir = r'E:\BackUp\HPWL0621\Pictures'
-# sourcedir = r'E:\BackUp\HPWL0621\OneDrive'
-# sourcedir = r'E:\BackUp\HPWL0621\Documents'
-# sourcedir = r'E:\BackUp\HPWL0621\OneDrive - Vallourec'
 sourcedir = r'E:\BackUp\HPWL0621'
 
 # directory where we want to delete the duplicates
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\Documents'
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\Pictures'
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\One Drive - Vallourec'
-# targetdir = r'E:\BackUp\HPWL0432'
 targetdir = r'E:\BackUp\Old Pro\Vallourec'
-# targetdir = r'E:\BackUp\Install'
-# targetdir = r'E:\BackUp\HPWL0621\FormerOrg'
 
 check_for_duplicates([sourcedir, targetdir], del_target=True)
