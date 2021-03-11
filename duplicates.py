@@ -1,30 +1,42 @@
 from collections import defaultdict
 import hashlib
 import os
-import sys
 
-
-def chunk_reader(fobj, chunk_size=1024):
-    """Generator that reads a file in chunks of bytes"""
+def chunk_generator(file, chunk_size=1024):
+    """Generator that reads a file in chunks of chunk_size bytes
+    
+    Args:
+        :file (obj): file object to be read in chunk
+        :chunk_size (int): size of the chunk in bit
+    
+    Return: the next chunk of the file of size chunk_size bit"""
     while True:
-        chunk = fobj.read(chunk_size)
-        if not chunk:
+        chunk = file.read(chunk_size)
+        if not chunk: # exit of the loop
             return
         yield chunk
 
+def get_hash(filename, first_1k=False, constructor=hashlib.sha1):
+    """Return hash for a file
 
-def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
-    hashobj = hash()
-    file_object = open(filename, 'rb')
+    Args:
+        :filename (str): filename to be hashed
+        :first_1k (bool): True hash only the first 1024 bit, False hash full file
+        :constructor: type of hash, defaulted to sha1
+    
+    Return: (str) hash of the file
+    """
+    hashobj = constructor()
+    file = open(filename, 'rb')
 
-    if first_chunk_only:
-        hashobj.update(file_object.read(1024))
+    if first_1k:
+        hashobj.update(file.read(1024))
     else:
-        for chunk in chunk_reader(file_object):
+        for chunk in chunk_generator(file):
             hashobj.update(chunk)
     hashed = hashobj.digest()
 
-    file_object.close()
+    file.close()
     return hashed
 
 def get_files_by_size(paths):
@@ -36,7 +48,7 @@ def get_files_by_size(paths):
     
     Return: dictionary { file size : [list of files of that size],...}
     """
-    hashes_by_size = defaultdict(list)  # dict of size_in_bytes: [full_path_to_file1, full_path_to_file2, ]
+    dict_files_x_size = defaultdict(list)  # dict of size_in_bytes: [full_path_to_file1, full_path_to_file2, ]
     for path in paths:
         for dirpath, __, filenames in os.walk(path):
             # get all files that have the same size - they are the collision candidates
@@ -47,26 +59,26 @@ def get_files_by_size(paths):
                     # dereference it - change the value to the actual target file
                     full_path = os.path.realpath(full_path)
                     file_size = os.path.getsize(full_path)
-                    hashes_by_size[file_size].append(full_path)
+                    dict_files_x_size[file_size].append(full_path)
                 except (OSError,):
                     # not accessible (permissions, etc) - pass on
                     continue
-    print('List by size, done')
-    return hashes_by_size
+    print('Dictionary of files by size has been built')
+    return dict_files_x_size
 
-def get_files_by_1k(hashes_by_size, hash=hashlib.sha1):
+def get_files_by_1k(dict_files_x_size, hash=hashlib.sha1):
     """Build a dictionary containing lists of files with the same size 
     and hash on their first 1024 bits. Those lists of files contains 
     potential duplicates that will be analysee further
 
     Args: 
-        :hashes_by_size (dict): dictionary { file size : [list of files of that size],...}
+        :dict_files_x_size (dict): dictionary { file size : [list of files of that size],...}
     
     Return: dictionary { (hash on 1024 bits, file size) : [list of files matching the key hash and size],...}
     """
-    hashes_on_1k = defaultdict(list)  # dict of (hash1k, size_in_bytes): [full_path_to_file1, full_path_to_file2, ]
+    ddict_files_x_1khash = defaultdict(list)  # dict of (hash1k, size_in_bytes): [full_path_to_file1, full_path_to_file2, ]
     # For all files with the same file size, get their hash on the 1st 1024 bytes only
-    for size_in_bytes, files in hashes_by_size.items():
+    for size_in_bytes, files in dict_files_x_size.items():
         if len(files) < 2:
             continue    # this file size is unique, no need to spend CPU cycles on it
 
@@ -76,39 +88,39 @@ def get_files_by_1k(hashes_by_size, hash=hashlib.sha1):
                 # the key is the hash on the first 1024 bytes plus the size - to
                 # avoid collisions on equal hashes in the first part of the file
                 # credits to @Futal for the optimization
-                hashes_on_1k[(small_hash, size_in_bytes)].append(filename)
+                ddict_files_x_1khash[(small_hash, size_in_bytes)].append(filename)
             except (OSError,):
                 # the file access might've changed till the exec point got here 
                 continue
-    print('List hash 1k, done')
-    return hashes_on_1k
+    print('Dictionary of files by hash on 1024 bit has been built')
+    return ddict_files_x_1khash
 
-def get_files_by_full(hashes_on_1k, hash=hashlib.sha1):
+def get_files_by_full(ddict_files_x_1khash, hash=hashlib.sha1):
     """Build a dictionary containing lists of files with the same size and 
     full file's hash. Those lists of files only contains duplicated files. 
 
     Args: 
-        :hashes_on_1k (dict): dictionary { (hash on 1024 bits, file size) : 
+        :ddict_files_x_1khash (dict): dictionary { (hash on 1024 bits, file size) : 
                                            list of files matching the key hash and size],...}
     
     Return: dictionary containing lists of duplicated files by their hash and size,
             { (full file's hash, file size) : [list of files sharing full hash and size],...}
     """
     # For all files with the same file size, and hash on the 1st 1024 bytes
-    hashes_full = defaultdict(list)   # dict of full_file_hash: full_path_to_file_string
-    for k, files_list in hashes_on_1k.items():
+    dict_files_x_fullhash = defaultdict(list)   # dict of full_file_hash: full_path_to_file_string
+    for k, files_list in ddict_files_x_1khash.items():
         if len(files_list) > 1:
             # we have several potential duplicated files that need further analysis
             for filename in files_list:
                 try:
                     full_hash = get_hash(filename, first_chunk_only=False)
-                    hashes_full[(full_hash, k[1])].append(filename)
+                    dict_files_x_fullhash[(full_hash, k[1])].append(filename)
                 except (OSError,):
                     # problem accesing the file
                     print(f'Error hashing file: {filename}')
                     continue # continue the loop
-    print('Dictionary by full hash has been built')
-    return hashes_full
+    print('Dictionary of files by full hash has been built')
+    return dict_files_x_fullhash
 
 def is_in_dir(file_name=None, folder=None):
     """Check if the file_name is in the folder or any of its subfolder
@@ -143,7 +155,7 @@ def delete_files(delete_list):
             continue # continue the loop
     return nb_deleted
 
-def print_df(nb_duplicates, nb_deleted, nb_kept, keep_list):
+def print_del_synth(nb_duplicates, nb_deleted, nb_kept, keep_list):
     """Print out synthesis for delete_duplicates routine
 
     Args:
@@ -186,7 +198,7 @@ def delete_duplicates(duplicate_dict, sourcedir, targetdir, printout=True):
                 nb_deleted = delete_files(delete_list)
             if printout:
                 # print out the result for this set of duplicated files
-                print_df(len(files_list), nb_deleted, len(keep_list), keep_list)
+                print_del_synth(len(files_list), nb_deleted, len(keep_list), keep_list)
 
 def drop_empty_folders(directory):
     """Walk a folder and all its sub folder, delete any empty (sub)folder
@@ -220,33 +232,21 @@ def print_duplicate(hash_dict):
             for filename in files_list:
                 print(filename)
 
-
 def check_for_duplicates(paths, hash=hashlib.sha1, del_target=False):
-    hashes_by_size = get_files_by_size(paths)
-    hashes_on_1k = get_files_by_1k(hashes_by_size)
-    hashes_full = get_files_by_full(hashes_on_1k)
+    dict_files_x_size = get_files_by_size(paths)
+    ddict_files_x_1khash = get_files_by_1k(dict_files_x_size)
+    dict_files_x_fullhash = get_files_by_full(ddict_files_x_1khash)
     if del_target:
-        delete_duplicates(hashes_full, sourcedir, targetdir)
+        delete_duplicates(dict_files_x_fullhash, sourcedir, targetdir)
         for _ in range(10):
             drop_empty_folders(targetdir)
     else:
-        print_duplicate(hashes_full)
+        print_duplicate(dict_files_x_fullhash)
 
 # master directory, will be kept untouched
-# sourcedir = r'E:\BackUp\HPWL0621\Documents'
-# sourcedir = r'E:\BackUp\HPWL0621\Pictures'
-# sourcedir = r'E:\BackUp\HPWL0621\OneDrive'
-# sourcedir = r'E:\BackUp\HPWL0621\Documents'
-# sourcedir = r'E:\BackUp\HPWL0621\OneDrive - Vallourec'
 sourcedir = r'E:\BackUp\HPWL0621'
 
 # directory where we want to delete the duplicates
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\Documents'
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\Pictures'
-# targetdir = r'E:\BackUp\HPWL0432\raphael.louvrier\One Drive - Vallourec'
-# targetdir = r'E:\BackUp\HPWL0432'
 targetdir = r'E:\BackUp\Old Pro\Vallourec'
-# targetdir = r'E:\BackUp\Install'
-# targetdir = r'E:\BackUp\HPWL0621\FormerOrg'
 
 check_for_duplicates([sourcedir, targetdir], del_target=True)
